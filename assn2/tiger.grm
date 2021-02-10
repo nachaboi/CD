@@ -1,0 +1,127 @@
+%{
+#include <stdio.h>
+#include "util.h"
+#include "errormsg.h"
+
+int yylex(void); /* function prototype */
+
+void yyerror(char *s)
+{
+ EM_error(EM_tokPos, "%s", s);
+}
+%}
+
+
+%union {
+	int pos;
+	int ival;
+	string sval;
+	}
+
+%token <sval> ID STRING
+%token <ival> INT
+
+%token 
+  COMMA COLON SEMICOLON LPAREN RPAREN LBRACK RBRACK 
+  LBRACE RBRACE DOT 
+  PLUS MINUS TIMES DIVIDE EQ NEQ LT LE GT GE
+  AND OR ASSIGN
+  ARRAY IF THEN ELSE WHILE FOR TO DO LET IN END OF 
+  BREAK NIL
+  FUNCTION VAR TYPE 
+
+
+%left OR
+%left AND
+%left EQ NEQ LT LE GT GE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%left UMINUS
+%nonassoc DO ELSE ASSIGN
+
+%start program
+
+%%
+
+program:	exp	{}
+
+decs:	dec decs_ext	{}
+	| 	{}
+
+decs_ext:		{}
+		| dec decs_ext	{}
+
+dec:	tydec	{}
+	| vardec	{}
+	| fundec	{}
+
+tydec:	TYPE ID EQ ty	{}
+
+ty:	ID		{}
+	| LBRACE tyfields RBRACE	{}
+	| ARRAY OF ID	{}
+	
+tyfields:		{}
+		| ID COLON ID tyfields_ext	{}
+
+tyfields_ext:	COMMA ID COLON ID tyfields_ext	{}
+		|	{}
+
+vardec:	VAR ID ASSIGN exp	{}
+		| VAR ID COLON ID ASSIGN exp	{}
+		
+fundec:	FUNCTION ID LPAREN tyfields RPAREN EQ exp 	{}
+		| FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp	{}
+
+lvalue:	ID	{}
+		| lvalue DOT ID	{}
+		| lvalue LBRACK exp RBRACK	{}
+
+exp:	INT		{}
+	| NIL		{}
+	| exp PLUS exp	{}
+	| exp MINUS exp	{}
+	| exp TIMES exp	{}
+	| exp DIVIDE exp	{}
+	| MINUS exp	%prec UMINUS	{}
+	| exp EQ exp	{}
+	| exp NEQ exp	{}
+	| exp LT exp	{}
+	| exp LE exp	{}
+	| exp GT exp	{}
+	| exp GE exp	{}
+	| exp AND exp	{}
+	| exp OR exp	{}
+	| ID ASSIGN exp	{}
+	| BREAK	{}
+	| LPAREN expseq RPAREN	{}
+	| STRING	{}
+	| LET decs IN expseq END	{}
+	| lvalue	{}
+	| lvalue ASSIGN exp	{}
+	| ID LPAREN RPAREN	{}
+	| ID LPAREN exp exp_com RPAREN	{}
+	| LPAREN RPAREN	{}
+	| IF exp THEN exp	{}
+	| IF exp THEN exp ELSE exp	{}
+	| WHILE exp DO exp	{}
+	| FOR ID ASSIGN exp TO exp DO exp	{}
+	| ID LBRACE ID EQ exp exp_comeq RBRACE{}
+	| ID LBRACE RBRACE	{}
+	| ID LBRACK exp RBRACK OF exp {}
+	| ID LBRACK exp RBRACK	{}
+	
+exp_com:	COMMA exp exp_com	{}
+		|	{}
+		
+exp_comeq:	COMMA ID EQ exp exp_comeq	{}
+		|	{}
+	
+exp_ext:	SEMICOLON exp exp_ext	{}
+		|	{}
+	
+expseq:	exp exp_ext	{}
+		|	{}
+
+
+
